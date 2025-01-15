@@ -1,75 +1,88 @@
-import { Image, StyleSheet, Platform, Text } from 'react-native';
+import Card, { CardProps } from "@/components/Card";
+import ParallaxScrollView from "@/components/ParallaxScrollView";
+import { ThemedText } from "@/components/ThemedText";
+import { fetchData } from "@/services/apiService";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet } from "react-native";
+import { FlatList, View } from "react-native";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-            <Text className='text-blue-300'> Welcome to Tailwindcss by NativeWind </Text>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+interface Data {
+  destinies: CardProps[]; // Array of destinies
 }
 
+const HomeScreen = () => {
+  const [data, setData] = useState<Data>({ destinies: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1); // Track current page
+  const [loadingMore, setLoadingMore] = useState(false); // Track loading more
+
+  const getData = async (currentPage = 1) => {
+    try {
+      const result = await fetchData(`?page=${currentPage}`); // Append page param if API supports pagination
+
+      setData((prevData) => ({
+        destinies: [...prevData.destinies, ...result.destinies], // Append new destinies
+      }));
+    } catch (err: any) {
+      setError(err.message || "An error occurred while fetching data.");
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    getData(page);
+  }, []);
+
+  const loadMoreData = () => {
+    if (!loadingMore) {
+      setLoadingMore(true);
+      const nextPage = page + 1;
+      setPage(nextPage);
+      getData(nextPage);
+    }
+  };
+
+  return (
+    <ParallaxScrollView
+      headerBackgroundColor={{ light: "#D0D0D0", dark: "#000" }}
+    >
+      <View className="flex flex-row items-center gap-3 w-full px-4">
+        <ThemedText type="title">Your Destination</ThemedText>
+      </View>
+      <FlatList
+        data={data.destinies}
+        renderItem={({ item }) => <Card data={item} />}
+        onEndReached={loadMoreData} // Trigger load more when reaching the end
+        onEndReachedThreshold={0.5} // Trigger when 50% away from the end
+        ListFooterComponent={
+          loadingMore ? (
+            <ActivityIndicator size="large" color="#0000ff" />
+          ) : null
+        }
+      />
+
+      {/* Error Handling */}
+      {error && <ThemedText type="error">{error}</ThemedText>}
+
+      {/* Initial Loading Indicator */}
+      {loading && <ActivityIndicator size="large" color="#0000ff" />}
+    </ParallaxScrollView>
+  );
+};
+
+export default HomeScreen;
+
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 16,
   },
-  stepContainer: {
-    gap: 8,
+  row: {
+    justifyContent: "space-between", // Adds spacing between columns
     marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
   },
 });
