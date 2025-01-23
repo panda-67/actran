@@ -1,0 +1,10 @@
+# Ignore build and dependency files
+node_modules
+build
+android
+ios
+
+# Ignore other files
+*.lock
+*.log
+
